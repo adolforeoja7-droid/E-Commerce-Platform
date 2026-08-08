@@ -24,9 +24,12 @@ app = Flask(__name__)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///products.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["JWT_SECRET_KEY"] = "shopsphere-super-secret-key-2026-abcdefghijklmnopqrstuvwxyz"
+app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
 
-UPLOAD_FOLDER = "uploads"
+UPLOAD_FOLDER = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "uploads"
+)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -39,7 +42,7 @@ CORS(
         r"/*": {
             "origins": [
                 "http://localhost:5173",
-                "http://127.0.0.1:5173"
+                "http://127.0.0.1:5173",
             ]
         }
     }
@@ -188,8 +191,8 @@ def upload_image():
     file.save(filepath)
 
     return {
-        "image": f"http://127.0.0.1:5000/uploads/{filename}"
-    }
+    "image": f"{request.host_url.rstrip('/')}/uploads/{filename}"
+}
 
 
 # ==========================
