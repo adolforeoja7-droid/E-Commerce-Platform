@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://127.0.0.1:5000",
+  baseURL: "https://e-commerce-platform-api.onrender.com",
 });
 
 // Attach JWT token
@@ -12,7 +12,7 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-
+https://github.com/adolforeoja7-droid/E-Commerce-Platform/blob/main/src/services/api.js
     return config;
   },
   (error) => Promise.reject(error)
