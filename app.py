@@ -286,68 +286,6 @@ def login():
         "user": user.to_dict()
     }, 200
 
-# ==========================
-# TEMPORARY CREATE ADMIN
-# ==========================
-
-@app.route("/create-admin", methods=["POST"])
-def create_admin():
-    setup_key = os.getenv("ADMIN_SETUP_KEY")
-
-    if not setup_key:
-        return {
-            "message": "Admin setup is disabled."
-        }, 403
-
-    data = request.get_json() or {}
-
-    if data.get("setup_key") != setup_key:
-        return {
-            "message": "Invalid setup key."
-        }, 403
-
-    username = data.get("username")
-    email = data.get("email")
-    password = data.get("password")
-
-    if not username or not email or not password:
-        return {
-            "message": "Username, email, and password are required."
-        }, 400
-
-    existing_user = User.query.filter_by(
-        email=email
-    ).first()
-
-    if existing_user:
-        existing_user.role = "admin"
-
-        db.session.commit()
-
-        return {
-            "message": "Existing user promoted to admin.",
-            "user": existing_user.to_dict()
-        }, 200
-
-    hashed_password = bcrypt.hashpw(
-        password.encode("utf-8"),
-        bcrypt.gensalt()
-    ).decode("utf-8")
-
-    admin = User(
-        username=username,
-        email=email,
-        password=hashed_password,
-        role="admin"
-    )
-
-    db.session.add(admin)
-    db.session.commit()
-
-    return {
-        "message": "Admin account created successfully.",
-        "user": admin.to_dict()
-    }, 201
 
     # ==========================
 # ==========================
