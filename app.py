@@ -53,6 +53,39 @@ jwt = JWTManager(app)
 with app.app_context():
     db.create_all()
 
+    admin_email = os.getenv("ADMIN_EMAIL")
+    admin_password = os.getenv("ADMIN_PASSWORD")
+    admin_username = os.getenv("ADMIN_USERNAME", "admin")
+
+    if admin_email and admin_password:
+        admin = User.query.filter_by(
+            email=admin_email
+        ).first()
+
+        if not admin:
+            hashed_password = bcrypt.hashpw(
+                admin_password.encode("utf-8"),
+                bcrypt.gensalt()
+            ).decode("utf-8")
+
+            admin = User(
+                username=admin_username,
+                email=admin_email,
+                password=hashed_password,
+                role="admin"
+            )
+
+            db.session.add(admin)
+            db.session.commit()
+
+            print("✅ Default admin account created.")
+
+        elif admin.role != "admin":
+            admin.role = "admin"
+            db.session.commit()
+
+            print("✅ Existing account promoted to admin.")
+
 
 
 def admin_required():
