@@ -55,40 +55,53 @@ db.init_app(app)
 # CORS
 # ==========================
 
+ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://e-commerce-platform-pi-sooty.vercel.app",
+]
+
+
+@app.before_request
+def handle_preflight():
+    if request.method == "OPTIONS":
+        response = jsonify({"message": "Preflight OK"})
+        response.status_code = 200
+
+        origin = request.headers.get("Origin")
+
+        if origin in ALLOWED_ORIGINS or (
+            origin and origin.endswith(".vercel.app")
+        ):
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Methods"] = (
+                "GET, POST, PUT, DELETE, OPTIONS"
+            )
+            response.headers["Access-Control-Allow-Headers"] = (
+                "Content-Type, Authorization"
+            )
+            response.headers["Vary"] = "Origin"
+
+        return response
+
+
 @app.after_request
 def add_cors_headers(response):
     origin = request.headers.get("Origin")
 
-    if origin:
-        allowed_origins = [
-            "http://localhost:5173",
-            "http://127.0.0.1:5173",
-            "https://e-commerce-platform-pi-sooty.vercel.app",
-        ]
-
-        # Allow your Vercel deployments
-        if (
-            origin in allowed_origins
-            or origin.endswith(".vercel.app")
-        ):
-            response.headers["Access-Control-Allow-Origin"] = origin
-            response.headers["Access-Control-Allow-Headers"] = (
-                "Content-Type, Authorization"
-            )
-            response.headers["Access-Control-Allow-Methods"] = (
-                "GET, POST, PUT, DELETE, OPTIONS"
-            )
-            response.headers["Vary"] = "Origin"
+    if origin in ALLOWED_ORIGINS or (
+        origin and origin.endswith(".vercel.app")
+    ):
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Methods"] = (
+            "GET, POST, PUT, DELETE, OPTIONS"
+        )
+        response.headers["Access-Control-Allow-Headers"] = (
+            "Content-Type, Authorization"
+        )
+        response.headers["Vary"] = "Origin"
 
     return response
-
-
-@app.before_request
-def handle_options():
-    if request.method == "OPTIONS":
-        return "", 204
-
-jwt = JWTManager(app)
 
 with app.app_context():
     db.create_all()
