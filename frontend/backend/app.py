@@ -93,11 +93,13 @@ with app.app_context():
     admin_username = os.getenv("ADMIN_USERNAME", "admin")
 
     if admin_email and admin_password:
+
         admin = User.query.filter_by(
             email=admin_email
         ).first()
 
         if not admin:
+            # CREATE ADMIN
             hashed_password = bcrypt.hashpw(
                 admin_password.encode("utf-8"),
                 bcrypt.gensalt()
@@ -115,11 +117,20 @@ with app.app_context():
 
             print("✅ Default admin account created.")
 
-        elif admin.role != "admin":
+        else:
+            # UPDATE EXISTING ADMIN
+            admin.username = admin_username
             admin.role = "admin"
+
+            # IMPORTANT: update password
+            admin.password = bcrypt.hashpw(
+                admin_password.encode("utf-8"),
+                bcrypt.gensalt()
+            ).decode("utf-8")
+
             db.session.commit()
 
-            print("✅ Existing account promoted to admin.")
+            print("✅ Admin account updated.")
 
 
 
