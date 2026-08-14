@@ -56,16 +56,33 @@ db.init_app(app)
 # CORS
 # ==========================
 
+# ==========================
+# CORS
+# ==========================
+
 CORS(
     app,
-    origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "https://e-commerce-platform-pi-sooty.vercel.app",
-        r"https://e-commerce-platform-.*-adolforeoja7-9079s-projects\.vercel\.app",
-    ],
-    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"],
+    resources={
+        r"/*": {
+            "origins": [
+                "http://localhost:5173",
+                "http://127.0.0.1:5173",
+                "https://e-commerce-platform-pi-sooty.vercel.app",
+                r"https://e-commerce-platform-.*\.vercel\.app",
+            ],
+            "methods": [
+                "GET",
+                "POST",
+                "PUT",
+                "DELETE",
+                "OPTIONS"
+            ],
+            "allow_headers": [
+                "Content-Type",
+                "Authorization"
+            ],
+        }
+    }
 )
 
 jwt = JWTManager(app)
