@@ -9,6 +9,7 @@ from flask_jwt_extended import (
 )
 
 from werkzeug.utils import secure_filename
+
 from models import (
     db,
     Product,
@@ -17,40 +18,81 @@ from models import (
     OrderItem,
     Wishlist
 )
+
 import bcrypt
 import os
 
+
+# ==========================
+# APP
+# ==========================
+
 app = Flask(__name__)
+
+
+# ==========================
+# DATABASE CONFIG
+# ==========================
 
 app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+
+# ==========================
+# JWT CONFIG
+# ==========================
+
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY")
+
+
+# ==========================
+# UPLOAD CONFIG
+# ==========================
 
 UPLOAD_FOLDER = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     "uploads"
 )
+
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+
+# ==========================
+# DATABASE INIT
+# ==========================
+
 db.init_app(app)
 
-from flask_cors import CORS
 
-CORS(app)
+# ==========================
+# CORS
+# ==========================
+
+ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://e-commerce-platform-pi-sooty.vercel.app",
+]
+
+CORS(
+    app,
+    resources={
+        r"/*": {
+            "origins": ALLOWED_ORIGINS
+        }
+    },
+    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
+)
+
 
 @app.after_request
 def add_cors_headers(response):
     origin = request.headers.get("Origin")
 
-    allowed_origins = [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "https://e-commerce-platform-pi-sooty.vercel.app",
-    ]
-
-    if origin in allowed_origins:
+    if origin in ALLOWED_ORIGINS:
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Access-Control-Allow-Headers"] = (
             "Content-Type, Authorization"
@@ -58,17 +100,21 @@ def add_cors_headers(response):
         response.headers["Access-Control-Allow-Methods"] = (
             "GET, POST, PUT, DELETE, OPTIONS"
         )
-        response.headers["Access-Control-Allow-Credentials"] = "true"
         response.headers["Vary"] = "Origin"
 
     return response
 
-    @app.before_request
-def handle_preflight():
-    if request.method == "OPTIONS":
-        return "", 200
+
+# ==========================
+# JWT INIT
+# ==========================
 
 jwt = JWTManager(app)
+
+
+# ==========================
+# CREATE DATABASE TABLES
+# ==========================
 
 with app.app_context():
     db.create_all()
@@ -78,11 +124,14 @@ with app.app_context():
     admin_username = os.getenv("ADMIN_USERNAME", "admin")
 
     if admin_email and admin_password:
+
         admin = User.query.filter_by(
             email=admin_email
         ).first()
 
+        # Create admin if it does not exist
         if not admin:
+
             hashed_password = bcrypt.hashpw(
                 admin_password.encode("utf-8"),
                 bcrypt.gensalt()
@@ -100,13 +149,18 @@ with app.app_context():
 
             print("✅ Default admin account created.")
 
+        # Make existing user an admin
         elif admin.role != "admin":
+
             admin.role = "admin"
             db.session.commit()
 
             print("✅ Existing account promoted to admin.")
 
 
+# ==========================
+# ADMIN REQUIRED
+# ==========================
 
 def admin_required():
     claims = get_jwt()
@@ -122,25 +176,33 @@ def admin_required():
 # ==========================
 # HOME
 # ==========================
+
 @app.route("/")
 def home():
-    return {
+    return jsonify({
         "message": "🚀 ShopSphere API Running!"
-    }
+    })
 
 
 # ==========================
 # GET ALL PRODUCTS
 # ==========================
+
 @app.route("/products", methods=["GET"])
 def get_products():
+
     products = Product.query.all()
-    return jsonify([product.to_dict() for product in products])
+
+    return jsonify([
+        product.to_dict()
+        for product in products
+    ])
 
 
 # ==========================
 # ADD PRODUCT
 # ==========================
+
 @app.route("/products", methods=["POST"])
 @jwt_required()
 def add_product():
@@ -152,12 +214,30 @@ def add_product():
 
     data = request.get_json()
 
+    if not data:
+        return jsonify({
+            "message": "No product data received."
+        }), 400
+
+    required_fields = [
+        "name",
+        "price",
+        "category",
+        "image"
+    ]
+
+    for field in required_fields:
+        if not data.get(field):
+            return jsonify({
+                "message": f"{field} is required."
+            }), 400
+
     product = Product(
         name=data["name"],
-        price=data["price"],
+        price=float(data["price"]),
         category=data["category"],
         image=data["image"],
-        rating=data.get("rating", 5),
+        rating=float(data.get("rating", 5))
     )
 
     db.session.add(product)
@@ -169,6 +249,7 @@ def add_product():
 # ==========================
 # UPDATE PRODUCT
 # ==========================
+
 @app.route("/products/<int:id>", methods=["PUT"])
 @jwt_required()
 def update_product(id):
@@ -177,15 +258,44 @@ def update_product(id):
 
     if check:
         return check
+
     product = Product.query.get_or_404(id)
 
     data = request.get_json()
 
-    product.name = data["name"]
-    product.price = data["price"]
-    product.category = data["category"]
-    product.image = data["image"]
-    product.rating = data.get("rating", product.rating)
+    if not data:
+        return jsonify({
+            "message": "No product data received."
+        }), 400
+
+    product.name = data.get(
+        "name",
+        product.name
+    )
+
+    product.price = float(
+        data.get(
+            "price",
+            product.price
+        )
+    )
+
+    product.category = data.get(
+        "category",
+        product.category
+    )
+
+    product.image = data.get(
+        "image",
+        product.image
+    )
+
+    product.rating = float(
+        data.get(
+            "rating",
+            product.rating
+        )
+    )
 
     db.session.commit()
 
@@ -195,6 +305,7 @@ def update_product(id):
 # ==========================
 # DELETE PRODUCT
 # ==========================
+
 @app.route("/products/<int:id>", methods=["DELETE"])
 @jwt_required()
 def delete_product(id):
@@ -217,6 +328,7 @@ def delete_product(id):
 # ==========================
 # UPLOAD IMAGE
 # ==========================
+
 @app.route("/upload", methods=["POST"])
 @jwt_required()
 def upload_image():
@@ -227,12 +339,16 @@ def upload_image():
         return check
 
     if "image" not in request.files:
-        return {"error": "No image uploaded"}, 400
+        return jsonify({
+            "message": "No image uploaded."
+        }), 400
 
     file = request.files["image"]
 
     if file.filename == "":
-        return {"error": "No selected file"}, 400
+        return jsonify({
+            "message": "No selected file."
+        }), 400
 
     filename = secure_filename(file.filename)
 
@@ -243,50 +359,79 @@ def upload_image():
 
     file.save(filepath)
 
-    return {
-    "image": f"{request.host_url.rstrip('/')}/uploads/{filename}"
-}
+    image_url = (
+        f"{request.host_url.rstrip('/')}"
+        f"/uploads/{filename}"
+    )
+
+    return jsonify({
+        "message": "Image uploaded successfully.",
+        "image": image_url
+    }), 201
 
 
 # ==========================
 # SERVE UPLOADED IMAGES
 # ==========================
+
 @app.route("/uploads/<filename>")
 def uploaded_file(filename):
+
     return send_from_directory(
         app.config["UPLOAD_FOLDER"],
         filename
     )
 
+
 # ==========================
 # REGISTER
 # ==========================
+
 @app.route("/register", methods=["POST"])
 def register():
 
     data = request.get_json()
 
-    # check email
+    if not data:
+        return jsonify({
+            "message": "No registration data received."
+        }), 400
 
-    existing = User.query.filter_by(
-        email=data["email"]
+    username = data.get("username", "").strip()
+    email = data.get("email", "").strip().lower()
+    password = data.get("password", "")
+
+    if not username or not email or not password:
+        return jsonify({
+            "message": "Username, email and password are required."
+        }), 400
+
+    existing_email = User.query.filter_by(
+        email=email
     ).first()
 
-    if existing:
-        return {
+    if existing_email:
+        return jsonify({
             "message": "Email already exists."
-        }, 400
+        }), 400
 
-    # hash password
+    existing_username = User.query.filter_by(
+        username=username
+    ).first()
+
+    if existing_username:
+        return jsonify({
+            "message": "Username already exists."
+        }), 400
 
     hashed_password = bcrypt.hashpw(
-        data["password"].encode("utf-8"),
+        password.encode("utf-8"),
         bcrypt.gensalt()
     ).decode("utf-8")
 
     user = User(
-        username=data["username"],
-        email=data["email"],
+        username=username,
+        email=email,
         password=hashed_password,
         role="user"
     )
@@ -294,54 +439,72 @@ def register():
     db.session.add(user)
     db.session.commit()
 
-    return {
-        "message": "User registered successfully."
-    }, 201
+    return jsonify({
+        "message": "User registered successfully.",
+        "user": user.to_dict()
+    }), 201
+
 
 # ==========================
 # LOGIN
 # ==========================
+
 @app.route("/login", methods=["POST"])
 def login():
 
     data = request.get_json()
 
-    # Hanapin ang user gamit ang email
+    if not data:
+        return jsonify({
+            "message": "No login data received."
+        }), 400
+
+    email = data.get(
+        "email",
+        ""
+    ).strip().lower()
+
+    password = data.get(
+        "password",
+        ""
+    )
+
+    if not email or not password:
+        return jsonify({
+            "message": "Email and password are required."
+        }), 400
+
     user = User.query.filter_by(
-        email=data["email"]
+        email=email
     ).first()
 
     if not user:
-        return {
+        return jsonify({
             "message": "Invalid email or password."
-        }, 401
+        }), 401
 
-    # I-check ang password
     if not bcrypt.checkpw(
-        data["password"].encode("utf-8"),
+        password.encode("utf-8"),
         user.password.encode("utf-8")
     ):
-        return {
+        return jsonify({
             "message": "Invalid email or password."
-        }, 401
+        }), 401
 
-    # Gumawa ng JWT token
     access_token = create_access_token(
-    identity=str(user.id),
-    additional_claims={
-        "role": user.role
-    }
-)
+        identity=str(user.id),
+        additional_claims={
+            "role": user.role
+        }
+    )
 
-    return {
+    return jsonify({
         "message": "Login successful.",
         "token": access_token,
         "user": user.to_dict()
-    }, 200
-
+    }), 200
 
     # ==========================
-# ==========================
 # GET MY WISHLIST
 # ==========================
 
@@ -349,7 +512,9 @@ def login():
 @jwt_required()
 def get_wishlist():
 
-    user_id = int(get_jwt_identity())
+    user_id = int(
+        get_jwt_identity()
+    )
 
     wishlist_items = Wishlist.query.filter_by(
         user_id=user_id
@@ -360,7 +525,8 @@ def get_wishlist():
         for item in wishlist_items
     ])
 
-    # ==========================
+
+# ==========================
 # ADD TO WISHLIST
 # ==========================
 
@@ -368,23 +534,33 @@ def get_wishlist():
 @jwt_required()
 def add_to_wishlist():
 
-    user_id = int(get_jwt_identity())
+    user_id = int(
+        get_jwt_identity()
+    )
 
     data = request.get_json()
+
+    if not data:
+        return jsonify({
+            "message": "No data received."
+        }), 400
 
     product_id = data.get("product_id")
 
     if not product_id:
-        return {
+        return jsonify({
             "message": "Product ID is required."
-        }, 400
+        }), 400
 
-    product = Product.query.get(product_id)
+    product = db.session.get(
+        Product,
+        product_id
+    )
 
     if not product:
-        return {
+        return jsonify({
             "message": "Product not found."
-        }, 404
+        }), 404
 
     existing = Wishlist.query.filter_by(
         user_id=user_id,
@@ -392,9 +568,9 @@ def add_to_wishlist():
     ).first()
 
     if existing:
-        return {
+        return jsonify({
             "message": "Product already in wishlist."
-        }, 400
+        }), 400
 
     wishlist = Wishlist(
         user_id=user_id,
@@ -404,20 +580,26 @@ def add_to_wishlist():
     db.session.add(wishlist)
     db.session.commit()
 
-    return {
+    return jsonify({
         "message": "Added to wishlist.",
         "wishlist": wishlist.to_dict()
-    }, 201
+    }), 201
 
-    # ==========================
+
+# ==========================
 # REMOVE FROM WISHLIST
 # ==========================
 
-@app.route("/wishlist/<int:product_id>", methods=["DELETE"])
+@app.route(
+    "/wishlist/<int:product_id>",
+    methods=["DELETE"]
+)
 @jwt_required()
 def remove_from_wishlist(product_id):
 
-    user_id = int(get_jwt_identity())
+    user_id = int(
+        get_jwt_identity()
+    )
 
     wishlist = Wishlist.query.filter_by(
         user_id=user_id,
@@ -425,55 +607,85 @@ def remove_from_wishlist(product_id):
     ).first()
 
     if not wishlist:
-        return {
+        return jsonify({
             "message": "Product is not in wishlist."
-        }, 404
+        }), 404
 
     db.session.delete(wishlist)
     db.session.commit()
 
-    return {
+    return jsonify({
         "message": "Removed from wishlist."
-    }
+    })
 
-    # ==========================
+
+# ==========================
 # CHECKOUT
 # ==========================
+
 @app.route("/checkout", methods=["POST"])
 @jwt_required()
 def checkout():
 
     data = request.get_json()
 
-    cart_items = data.get("items", [])
+    if not data:
+        return jsonify({
+            "message": "No checkout data received."
+        }), 400
+
+    cart_items = data.get(
+        "items",
+        []
+    )
 
     if not cart_items:
-        return {
+        return jsonify({
             "message": "Cart is empty."
-        }, 400
+        }), 400
 
-    user_id = int(get_jwt_identity())
+    user_id = int(
+        get_jwt_identity()
+    )
 
     total = 0
 
     order = Order(
         user_id=user_id,
-        total=0
+        total=0,
+        status="Pending"
     )
 
     db.session.add(order)
+
+    # Create order ID before adding items
     db.session.flush()
+
+    valid_items = 0
 
     for item in cart_items:
 
-        product = Product.query.get(item["id"])
+        product_id = item.get("id")
+        quantity = int(
+            item.get("quantity", 1)
+        )
+
+        product = db.session.get(
+            Product,
+            product_id
+        )
 
         if not product:
             continue
 
-        quantity = item["quantity"]
+        if quantity <= 0:
+            continue
 
-        total += product.price * quantity
+        valid_items += 1
+
+        total += (
+            product.price * quantity
+        )
 
         order_item = OrderItem(
             order_id=order.id,
@@ -484,23 +696,34 @@ def checkout():
 
         db.session.add(order_item)
 
+    if valid_items == 0:
+        db.session.rollback()
+
+        return jsonify({
+            "message": "No valid products found."
+        }), 400
+
     order.total = total
 
     db.session.commit()
 
-    return {
+    return jsonify({
         "message": "Order placed successfully.",
         "order": order.to_dict()
-    }, 201
+    }), 201
 
-    # ==========================
+
+# ==========================
 # MY ORDERS
 # ==========================
+
 @app.route("/my-orders", methods=["GET"])
 @jwt_required()
 def my_orders():
 
-    user_id = int(get_jwt_identity())
+    user_id = int(
+        get_jwt_identity()
+    )
 
     orders = Order.query.filter_by(
         user_id=user_id
@@ -513,9 +736,11 @@ def my_orders():
         for order in orders
     ])
 
-    # ==========================
-# GET ALL ORDERS (ADMIN)
+
 # ==========================
+# GET ALL ORDERS - ADMIN
+# ==========================
+
 @app.route("/orders", methods=["GET"])
 @jwt_required()
 def get_orders():
@@ -534,10 +759,15 @@ def get_orders():
         for order in orders
     ])
 
-    # ==========================
+
+# ==========================
 # UPDATE ORDER STATUS
 # ==========================
-@app.route("/orders/<int:id>", methods=["PUT"])
+
+@app.route(
+    "/orders/<int:id>",
+    methods=["PUT"]
+)
 @jwt_required()
 def update_order(id):
 
@@ -550,12 +780,32 @@ def update_order(id):
 
     data = request.get_json()
 
-    order.status = data["status"]
+    if not data:
+        return jsonify({
+            "message": "No data received."
+        }), 400
+
+    status = data.get("status")
+
+    if not status:
+        return jsonify({
+            "message": "Status is required."
+        }), 400
+
+    order.status = status
 
     db.session.commit()
 
     return jsonify(order.to_dict())
 
 
+# ==========================
+# RUN APP
+# ==========================
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(
+        host="0.0.0.0",
+        port=int(os.getenv("PORT", 5000)),
+        debug=True
+    )
