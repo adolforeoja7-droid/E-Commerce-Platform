@@ -56,14 +56,14 @@ ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 
-    
+    # Vercel Production
     "https://e-commerce-platform-pi-sooty.vercel.app",
 
-    
+    # Vercel Git Main
     "https://e-commerce-platform-git-main-adolforeoja7-9079s-projects.vercel.app",
 
-    
-    "https://e-commerce-platform-hufz1252-adolforeoja7-9079s-projects.vercel.app",
+    # Current Vercel Deployment
+    "https://e-commerce-platform-hufz1252r-adolforeoja7-9079s-projects.vercel.app",
 ]
 
 CORS(
