@@ -64,16 +64,54 @@ db.init_app(app)
 # CORS
 # ==========================
 
+# ==========================
+# CORS
+# ==========================
+
 CORS(
     app,
-    resources={
-        r"/*": {
-            "origins": "*"
-        }
-    },
+    origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://e-commerce-platform-pi-sooty.vercel.app",
+    ],
     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"]
+    allow_headers=["Content-Type", "Authorization"],
 )
+
+
+@app.after_request
+def add_cors_headers(response):
+    origin = request.headers.get("Origin")
+
+    allowed = False
+
+    # Local development
+    if origin in [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]:
+        allowed = True
+
+    # Main Vercel domain
+    elif origin == "https://e-commerce-platform-pi-sooty.vercel.app":
+        allowed = True
+
+    # Allow Vercel preview deployments
+    elif origin and origin.endswith(".vercel.app"):
+        allowed = True
+
+    if allowed:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Headers"] = (
+            "Content-Type, Authorization"
+        )
+        response.headers["Access-Control-Allow-Methods"] = (
+            "GET, POST, PUT, DELETE, OPTIONS"
+        )
+        response.headers["Vary"] = "Origin"
+
+    return response
 
 jwt = JWTManager(app)
 
