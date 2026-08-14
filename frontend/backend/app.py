@@ -52,44 +52,21 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 db.init_app(app)
 
 
-ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-
-    # Vercel Production
-    "https://e-commerce-platform-pi-sooty.vercel.app",
-
-    # Vercel Git Main
-    "https://e-commerce-platform-git-main-adolforeoja7-9079s-projects.vercel.app",
-
-    # Current Vercel Deployment
-    "https://e-commerce-platform-hufz1252r-adolforeoja7-9079s-projects.vercel.app",
-]
+# ==========================
+# CORS
+# ==========================
 
 CORS(
     app,
-    origins=ALLOWED_ORIGINS,
+    origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://e-commerce-platform-pi-sooty.vercel.app",
+        r"https://e-commerce-platform-.*-adolforeoja7-9079s-projects\.vercel\.app",
+    ],
     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
 )
-
-
-@app.after_request
-def add_cors_headers(response):
-    origin = request.headers.get("Origin")
-
-    if origin in ALLOWED_ORIGINS:
-        response.headers["Access-Control-Allow-Origin"] = origin
-        response.headers["Access-Control-Allow-Headers"] = (
-            "Content-Type, Authorization"
-        )
-        response.headers["Access-Control-Allow-Methods"] = (
-            "GET, POST, PUT, DELETE, OPTIONS"
-        )
-        response.headers["Vary"] = "Origin"
-
-    return response
-
 
 jwt = JWTManager(app)
 
