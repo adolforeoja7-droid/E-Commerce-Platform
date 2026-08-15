@@ -31,60 +31,28 @@ import os
 app = Flask(__name__)
 
 
-# ==========================
-# CORS - VERCEL + LOCALHOST
-# ==========================
-
 CORS(
     app,
-    resources={
-        r"/*": {
-            "origins": [
-                "http://localhost:5173",
-                "http://127.0.0.1:5173",
-                "https://e-commerce-platform-pi-sooty.vercel.app",
-            ]
-        }
-    },
-    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"],
-)
-
-
-# ==========================
-# FORCE CORS HEADERS
-# ==========================
-
-@app.after_request
-def add_cors_headers(response):
-
-    origin = request.headers.get("Origin")
-
-    allowed_origins = [
+    origins=[
+        "https://e-commerce-platform-pi-sooty.vercel.app",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
-        "https://e-commerce-platform-pi-sooty.vercel.app",
-    ]
+    ],
+    methods=[
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "OPTIONS"
+    ],
+    allow_headers=[
+        "Content-Type",
+        "Authorization"
+    ],
+    supports_credentials=False,
+    automatic_options=True
+)
 
-    # Allow exact frontend URL
-    if origin in allowed_origins:
-        response.headers["Access-Control-Allow-Origin"] = origin
-
-    # Allow Vercel preview deployments
-    elif origin and origin.endswith(".vercel.app"):
-        response.headers["Access-Control-Allow-Origin"] = origin
-
-    response.headers["Access-Control-Allow-Methods"] = (
-        "GET, POST, PUT, DELETE, OPTIONS"
-    )
-
-    response.headers["Access-Control-Allow-Headers"] = (
-        "Content-Type, Authorization"
-    )
-
-    response.headers["Vary"] = "Origin"
-
-    return response
 
 
 # ==========================
