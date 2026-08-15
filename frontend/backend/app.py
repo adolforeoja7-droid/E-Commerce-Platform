@@ -82,27 +82,14 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 CORS(
     app,
-    resources={
-        r"/*": {
-            "origins": [
-                "http://localhost:5173",
-                "http://127.0.0.1:5173",
-                "https://e-commerce-platform-pi-sooty.vercel.app",
-                r"https://.*\.vercel\.app",
-            ]
-        }
-    },
-    methods=[
-        "GET",
-        "POST",
-        "PUT",
-        "DELETE",
-        "OPTIONS"
+    origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://e-commerce-platform-pi-sooty.vercel.app",
     ],
-    allow_headers=[
-        "Content-Type",
-        "Authorization"
-    ]
+    supports_credentials=False,
+    allow_headers=["Content-Type", "Authorization"],
+    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
 )
 
 
