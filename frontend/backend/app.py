@@ -1,4 +1,5 @@
-from flask import Flask, request, jsonify, send_from_directory, make_response
+from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS
 
 from flask_jwt_extended import (
     JWTManager,
@@ -29,57 +30,47 @@ import os
 
 app = Flask(__name__)
 
+
 # ==========================
-# CORS CONFIGURATION
+# CORS - VERCEL + LOCALHOST
 # ==========================
 
-ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "https://e-commerce-platform-pi-sooty.vercel.app",
-]
+CORS(
+    app,
+    resources={
+        r"/*": {
+            "origins": [
+                "http://localhost:5173",
+                "http://127.0.0.1:5173",
+                "https://e-commerce-platform-pi-sooty.vercel.app",
+            ]
+        }
+    },
+    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
+)
 
 
-@app.before_request
-def handle_options():
-
-    if request.method == "OPTIONS":
-
-        response = make_response("", 200)
-
-        origin = request.headers.get("Origin")
-
-        # Allow exact frontend
-        if origin in ALLOWED_ORIGINS:
-            response.headers["Access-Control-Allow-Origin"] = origin
-
-        # Allow Vercel preview deployments
-        elif origin and origin.endswith(".vercel.app"):
-            response.headers["Access-Control-Allow-Origin"] = origin
-
-        response.headers["Access-Control-Allow-Methods"] = (
-            "GET, POST, PUT, DELETE, OPTIONS"
-        )
-
-        response.headers["Access-Control-Allow-Headers"] = (
-            "Content-Type, Authorization"
-        )
-
-        response.headers["Access-Control-Max-Age"] = "86400"
-
-        response.headers["Vary"] = "Origin"
-
-        return response
-
+# ==========================
+# FORCE CORS HEADERS
+# ==========================
 
 @app.after_request
 def add_cors_headers(response):
 
     origin = request.headers.get("Origin")
 
-    if origin in ALLOWED_ORIGINS:
+    allowed_origins = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://e-commerce-platform-pi-sooty.vercel.app",
+    ]
+
+    # Allow exact frontend URL
+    if origin in allowed_origins:
         response.headers["Access-Control-Allow-Origin"] = origin
 
+    # Allow Vercel preview deployments
     elif origin and origin.endswith(".vercel.app"):
         response.headers["Access-Control-Allow-Origin"] = origin
 
@@ -105,7 +96,6 @@ DATABASE_URL = os.getenv(
     "sqlite:///products.db"
 )
 
-# Fix old PostgreSQL URL if needed
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace(
         "postgres://",
