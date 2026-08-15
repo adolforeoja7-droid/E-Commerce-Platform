@@ -30,6 +30,7 @@ import os
 
 app = Flask(__name__)
 
+
 # ==========================
 # CORS
 # ==========================
@@ -100,7 +101,6 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
-
 # ==========================
 # INITIALIZE DATABASE
 # ==========================
@@ -137,10 +137,6 @@ with app.app_context():
             email=admin_email
         ).first()
 
-        # ==========================
-        # CREATE ADMIN
-        # ==========================
-
         if not admin:
 
             hashed_password = bcrypt.hashpw(
@@ -160,26 +156,19 @@ with app.app_context():
 
             print("✅ Default admin account created.")
 
-        # ==========================
-        # UPDATE ADMIN
-        # ==========================
-
         else:
 
             admin.username = admin_username
             admin.role = "admin"
 
-            hashed_password = bcrypt.hashpw(
+            admin.password = bcrypt.hashpw(
                 admin_password.encode("utf-8"),
                 bcrypt.gensalt()
             ).decode("utf-8")
 
-            admin.password = hashed_password
-
             db.session.commit()
 
             print("✅ Admin account updated.")
-
 
 # ==========================
 # ADMIN REQUIRED FUNCTION
