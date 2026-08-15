@@ -30,6 +30,30 @@ import os
 
 app = Flask(__name__)
 
+# ==========================
+# CORS
+# ==========================
+
+CORS(
+    app,
+    resources={
+        r"/*": {
+            "origins": "*"
+        }
+    },
+    methods=[
+        "GET",
+        "POST",
+        "PUT",
+        "DELETE",
+        "OPTIONS"
+    ],
+    allow_headers=[
+        "Content-Type",
+        "Authorization"
+    ]
+)
+
 
 # ==========================
 # DATABASE CONFIGURATION
@@ -75,22 +99,6 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-
-# ==========================
-# CORS CONFIGURATION
-# ==========================
-
-CORS(
-    app,
-    origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "https://e-commerce-platform-pi-sooty.vercel.app",
-    ],
-    supports_credentials=False,
-    allow_headers=["Content-Type", "Authorization"],
-    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-)
 
 
 # ==========================
