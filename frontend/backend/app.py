@@ -1,5 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
+from flask import Flask, request, jsonify, send_from_directory, make_response
 
 from flask_jwt_extended import (
     JWTManager,
@@ -30,23 +29,71 @@ import os
 
 app = Flask(__name__)
 
+# ==========================
+# CORS CONFIGURATION
+# ==========================
 
-from flask_cors import CORS
+ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://e-commerce-platform-pi-sooty.vercel.app",
+]
 
-CORS(
-    app,
-    resources={
-        r"/*": {
-            "origins": [
-                "http://localhost:5173",
-                "http://127.0.0.1:5173",
-                "https://e-commerce-platform-pi-sooty.vercel.app",
-            ]
-        }
-    },
-    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"],
-)
+
+@app.before_request
+def handle_options():
+
+    if request.method == "OPTIONS":
+
+        response = make_response("", 200)
+
+        origin = request.headers.get("Origin")
+
+        # Allow exact frontend
+        if origin in ALLOWED_ORIGINS:
+            response.headers["Access-Control-Allow-Origin"] = origin
+
+        # Allow Vercel preview deployments
+        elif origin and origin.endswith(".vercel.app"):
+            response.headers["Access-Control-Allow-Origin"] = origin
+
+        response.headers["Access-Control-Allow-Methods"] = (
+            "GET, POST, PUT, DELETE, OPTIONS"
+        )
+
+        response.headers["Access-Control-Allow-Headers"] = (
+            "Content-Type, Authorization"
+        )
+
+        response.headers["Access-Control-Max-Age"] = "86400"
+
+        response.headers["Vary"] = "Origin"
+
+        return response
+
+
+@app.after_request
+def add_cors_headers(response):
+
+    origin = request.headers.get("Origin")
+
+    if origin in ALLOWED_ORIGINS:
+        response.headers["Access-Control-Allow-Origin"] = origin
+
+    elif origin and origin.endswith(".vercel.app"):
+        response.headers["Access-Control-Allow-Origin"] = origin
+
+    response.headers["Access-Control-Allow-Methods"] = (
+        "GET, POST, PUT, DELETE, OPTIONS"
+    )
+
+    response.headers["Access-Control-Allow-Headers"] = (
+        "Content-Type, Authorization"
+    )
+
+    response.headers["Vary"] = "Origin"
+
+    return response
 
 
 # ==========================
